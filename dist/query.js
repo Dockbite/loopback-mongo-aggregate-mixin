@@ -1,7 +1,7 @@
 var Aggregate,
   slice = [].slice;
 
-Aggregate = (function() {
+Aggregate = (function () {
   var converQuery, isOperator;
 
   function Aggregate() {
@@ -12,14 +12,14 @@ Aggregate = (function() {
     this.append.apply(this, args);
   }
 
-  isOperator = function(obj) {
+  isOperator = function (obj) {
     var k, o;
     if (typeof obj !== 'object') {
       return false;
     }
     k = Object.keys(obj);
     o = {};
-    k.forEach(function(key) {
+    k.forEach(function (key) {
       var item;
       item = obj[key];
       if (key[0] !== '$') {
@@ -30,17 +30,17 @@ Aggregate = (function() {
     return o;
   };
 
-  converQuery = function(where) {
+  converQuery = function (where) {
     var query;
     query = {};
     if (where === null || typeof where !== 'object') {
       return query;
     }
-    Object.keys(where).forEach(function(k) {
+    Object.keys(where).forEach(function (k) {
       var cond;
       cond = where[k];
       if ((k === 'and' || k === 'or' || k === 'nor') && Array.isArray(cond)) {
-        cond = cond.map(function(c) {
+        cond = cond.map(function (c) {
           return buildWhere(c);
         });
       }
@@ -52,7 +52,7 @@ Aggregate = (function() {
     return query;
   };
 
-  Aggregate.prototype.append = function() {
+  Aggregate.prototype.append = function () {
     var args, keys;
     args = 1 <= arguments.length ? slice.call(arguments, 0) : [];
     args = args.length === 1 && Array.isArray(args[0]) ? args[0] : args;
@@ -61,20 +61,20 @@ Aggregate = (function() {
     return this;
   };
 
-  Aggregate.prototype.project = function(fields) {
+  Aggregate.prototype.project = function (fields) {
     return this.append({
       $project: fields
     });
   };
 
-  Aggregate.prototype.near = function(arg) {
+  Aggregate.prototype.near = function (arg) {
     var op;
     op = {};
     op.$geoNear = arg;
     return this.append(op);
   };
 
-  Aggregate.prototype.unwind = function() {
+  Aggregate.prototype.unwind = function () {
     var arg, args, i, res;
     args = 1 <= arguments.length ? slice.call(arguments, 0) : [];
     res = [];
@@ -97,13 +97,13 @@ Aggregate = (function() {
     return this.append.apply(this, res);
   };
 
-  Aggregate.prototype.lookup = function(options) {
+  Aggregate.prototype.lookup = function (options) {
     return this.append({
       $lookup: options
     });
   };
 
-  Aggregate.prototype.sample = function(size) {
+  Aggregate.prototype.sample = function (size) {
     return this.append({
       $sample: {
         size: size
@@ -111,13 +111,14 @@ Aggregate = (function() {
     });
   };
 
-  Aggregate.prototype.sort = function(sort) {
-    return this.append({
-      $sort: sort
-    });
-  };
+  // Aggregate.prototype.sort = function (sort) {
+  //   return this.append({
+  //     $sort: sort
+  //   });
+  // };
 
-  Aggregate.prototype.explain = function(collection, callback) {
+
+  Aggregate.prototype.explain = function (collection, callback) {
     var err;
     if (!this.pipeline.length) {
       err = new Error('Aggregate has empty pipeline');
@@ -126,22 +127,22 @@ Aggregate = (function() {
     return collection.aggregate(this.pipeline, this.options).explain(callback);
   };
 
-  Aggregate.prototype.allowDiskUse = function(value) {
+  Aggregate.prototype.allowDiskUse = function (value) {
     this.options.allowDiskUse = value;
     return this;
   };
 
-  Aggregate.prototype.cursor = function(options) {
+  Aggregate.prototype.cursor = function (options) {
     this.options.cursor = options || {};
     return this;
   };
 
-  Aggregate.prototype.addCursorFlag = function(flag, value) {
+  Aggregate.prototype.addCursorFlag = function (flag, value) {
     this.options[flag] = value;
     return this;
   };
 
-  Aggregate.prototype.exec = function(collection) {
+  Aggregate.prototype.exec = function (collection) {
     if (!collection) {
       throw new Error('Aggregate not bound to any Model');
     }
@@ -152,13 +153,34 @@ Aggregate = (function() {
 
 })();
 
-['group', 'match', 'skip', 'limit', 'out'].forEach(function(operator) {
-  return Aggregate.prototype[operator] = function(arg) {
+['group', 'match', 'skip', 'limit', 'out'].forEach(function (operator) {
+  return Aggregate.prototype[operator] = function (arg) {
     var op;
     op = {};
     op['$' + operator] = arg;
     return this.append(op);
   };
 });
+
+Aggregate.prototype.skip = function (skip) {
+  this.pipeline = this.pipeline.concat({
+    $skip: skip
+  });
+  return this;
+};
+
+Aggregate.prototype.limit = function (limit) {
+  this.pipeline = this.pipeline.concat({
+    $limit: limit
+  });
+  return this;
+};
+
+Aggregate.prototype.sort = function (sort) {
+  this.pipeline = this.pipeline.concat({
+    $sort: sort
+  });
+  return this;
+};
 
 module.exports = Aggregate;
