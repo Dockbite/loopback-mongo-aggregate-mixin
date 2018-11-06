@@ -36,23 +36,70 @@ module.exports = function(Model) {
       aggregate.project(filter.fields);
     }
     if (filter.sort) {
-      aggregate.sort(connector.buildSort(filter.sort));
-    }
-    collection = connector.collection(model);
-    cursor = aggregate.exec(collection);
-    if (filter.limit) {
-      cursor.limit(filter.limit);
+      // aggregate.sort(connector.buildSort(filter.sort));
+      aggregate.sort(filter.sort);
     }
     if (filter.skip) {
-      cursor.skip(filter.skip);
+      aggregate.skip(filter.skip);
     } else if (filter.offset) {
-      cursor.skip(filter.offset);
+      aggregate.skip(filter.offset);
     }
+    if (filter.limit) {
+      aggregate.limit(filter.limit);
+    }
+
+    collection = connector.collection(model);
+    cursor = aggregate.exec(collection);
+    return cursor.toArray(function(err, data) {
+      debug('aggregate', model, filter, err, data);
+      if(err){
+        return callback(err);
+      }else{
+        return callback(err, data.map(rewriteId));
+      }
+    });
+  };
+
+  Model.count = function(filter, options, callback) {
+    var aggregate, collection, connector, cursor, model, where;
+    connector = this.getConnector();
+    model = Model.modelName;
+    debug('aggregate', model);
+    if (!filter.aggregate) {
+      return callback(new Error('no aggregate filter'));
+    }
+    aggregate = new Aggregate(filter.aggregate);
+    if (filter.where) {
+      where = connector.buildWhere(model, filter.where);
+      aggregate.pipeline.unshift({
+        '$match': where
+      });
+    }
+    debug('all.aggregate', aggregate.pipeline);
+    if (filter.fields) {
+      aggregate.project(filter.fields);
+    }
+    // if (filter.sort) {
+    //   // aggregate.sort(connector.buildSort(filter.sort));
+    //   aggregate.sort(filter.sort);
+    // }
+    // if (filter.skip) {
+    //   aggregate.skip(filter.skip);
+    // } else if (filter.offset) {
+    //   aggregate.skip(filter.offset);
+    // }
+    // if (filter.limit) {
+    //   aggregate.limit(filter.limit);
+    // }
+
+    collection = connector.collection(model);
+    cursor = aggregate.exec(collection);
     return cursor.toArray(function(err, data) {
       debug('aggregate', model, filter, err, data);
       return callback(err, data.map(rewriteId));
     });
   };
+
   Model.remoteMethod('aggregate', {
     accepts: [
       {
